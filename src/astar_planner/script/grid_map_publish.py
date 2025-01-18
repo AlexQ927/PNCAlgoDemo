@@ -27,11 +27,18 @@ class GridMapPublisher(Node):
         self.set_obstacle(200, 700, 60, 200)
         self.set_obstacle(350, 500, 100, 400)
         self.set_obstacle(100, 300, 200, 20)
+        self.set_obstacle(300, 200, 400, 20)
+        self.set_obstacle(400, 500, 200, 40)
+        self.set_obstacle(200, 500, 300, 80)
+        self.set_obstacle(50, 100, 20, 100)
+        self.set_obstacle(100, 700, 150, 40)
+        self.set_obstacle(400, 900, 200, 50)
+        self.set_obstacle(300, 100, 400, 70)
         self.grid_publisher.publish(self.grid)
         start_pose = PoseStamped()
         start_pose.header.stamp = self.get_clock().now().to_msg()
         start_pose.header.frame_id = 'start_' + str(self.count)
-        start_pose.pose.position.x = 10 * self.grid.info.resolution
+        start_pose.pose.position.x = 460 * self.grid.info.resolution
         start_pose.pose.position.y = 20 * self.grid.info.resolution
         self.start_publisher.publish(start_pose)
         end_pose = PoseStamped()
@@ -49,14 +56,10 @@ class GridMapPublisher(Node):
         
 
     def set_obstacle(self, center_x, center_y, width, height):
-        left = center_x - int(width / 2)
-        right = left + width
-        low = center_y - int(height / 2)
-        high = low + height
-        if left < 0 or right >= self.grid.info.width:
-            return
-        if low < 0 or high >= self.grid.info.height:
-            return
+        left = max(center_x - int(width / 2), 0)
+        right = min(left + width, self.grid.info.width)
+        low = max(center_y - int(height / 2), 0)
+        high = min(low + height, self.grid.info.height)
         # print("left: " + str(left))
         # print("right: " + str(right))
         # print("low: " + str(low))
