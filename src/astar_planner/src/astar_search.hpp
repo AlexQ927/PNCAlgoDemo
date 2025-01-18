@@ -6,6 +6,8 @@
 #include <queue>
 #include <stdexcept>
 #include <memory>
+#include <limits>
+#include <unordered_map>
 
 using std::placeholders::_1;
 
@@ -14,6 +16,7 @@ namespace pnc
 
 using nav_msgs::msg::OccupancyGrid;
 using geometry_msgs::msg::PoseStamped;
+using geometry_msgs::msg::Pose;
 
 struct AstarNode {
   int x;
@@ -21,21 +24,24 @@ struct AstarNode {
   double cost;
   // AstarNode * p_node;
   int parent;
+  AstarNode(): x(0), y(0), cost(0.0), parent(-1) {}
   AstarNode(int in_x, int in_y, double in_cost, int in_parent)
-  : x(in_x), y(in_y), cost(in_cost), parent(in_parent){}
+  : x(in_x), y(in_y), cost(in_cost), parent(in_parent) {}
 };
 
 struct MotionCost {
   int8_t i;
   int8_t j;
   double cost;
+  MotionCost() : i(0), j(0), cost(0.0) {}
   MotionCost(int8_t in_i, int8_t in_j, double in_cost)
-  : i(in_i), j(in_j), cost(in_cost){}
+  : i(in_i), j(in_j), cost(in_cost) {}
 };
 
 struct IndexXY {
   int x;
   int y;
+  IndexXY() : x(0), y(0) {}
   IndexXY(int in_x, int in_y) : x(in_x), y(in_y) {}
 };
 
@@ -51,6 +57,7 @@ public:
     this->end_sub = this->create_subscription<PoseStamped>(
       "end_pose", 10, std::bind(&AstarSearchNode::end_callback, this, _1));
   }
+  std::vector<IndexXY> get_final_path() { return final_path; }
 private:
   void grid_callback(const OccupancyGrid& grid)
   {
@@ -67,14 +74,15 @@ private:
     this->end_buf.push(end);
     this->process_bufs();
   }
-  int cal_pose_index(double x1, double x0);
+  IndexXY cal_pose_index(const Pose& p, const Pose& ori);
   int cal_grid_index(const AstarNode& node);
+  double calc_heuristic(const AstarNode& n1, const AstarNode& n2);
   bool is_valid(const AstarNode& node);
-
-  void process_bufs();
-  void process_synced_data(const OccupancyGrid& grid, const PoseStamped& start, 
+  bool find_final_path(const AstarNode& end_node);
+  bool process_bufs();
+  bool process_synced_data(const OccupancyGrid& grid, const PoseStamped& start, 
                            const PoseStamped& end);
-  bool astar_search();
+  bool astar_search(const IndexXY& start, const IndexXY& end);
   rclcpp::Subscription<OccupancyGrid>::SharedPtr grid_sub{};
   rclcpp::Subscription<PoseStamped>::SharedPtr start_sub{};
   rclcpp::Subscription<PoseStamped>::SharedPtr end_sub{};
@@ -84,15 +92,15 @@ private:
   uint32_t height{};
   uint32_t width{};
   double resolution{};
-  geometry_msgs::msg::Pose origin_pose;
-  int i_x0{};
-  int i_y0{};
-  geometry_msgs::msg::Pose start_pose;
-  geometry_msgs::msg::Pose end_pose;
+  Pose origin_pose{};
+  Pose start_pose{};
+  Pose end_pose{};
   std::unique_ptr<std::vector<int8_t>> grid_map{};
   std::unique_ptr<std::vector<std::vector<int8_t>>> cost_map{};
   std::unique_ptr<std::vector<MotionCost>> motion{};
-  std::unique_ptr<std::vector<IndexXY>> final_path{};
+  std::unique_ptr<std::unordered_map<int, AstarNode>> open_map{};
+  std::unique_ptr<std::unordered_map<int, AstarNode>> close_map{};
+  std::vector<IndexXY> final_path{};
 };// class astar_search_node
 } // namespace pnc
 
