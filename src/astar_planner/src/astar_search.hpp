@@ -87,6 +87,7 @@ private:
     this->process_bufs();
   }
   void timer_callback();
+  void init_data();
   IndexXY cal_pose_index(const Pose& p, const Pose& ori);
   int cal_grid_index(const AstarNode& node);
   Pose cal_node_pose(const AstarNode& node);

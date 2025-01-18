@@ -20,6 +20,17 @@ void AstarSearchNode::timer_callback()
   }
 }
 
+void AstarSearchNode::init_data()
+{
+  cost_map = std::make_unique<std::vector<std::vector<int8_t>>>();
+  motion = std::make_unique<std::vector<MotionCost>>();
+  open_map = std::make_unique<std::unordered_map<int, AstarNode>>();
+  close_map = std::make_unique<std::unordered_map<int, AstarNode>>();
+  grid_map.clear();
+  final_path_idx.clear();
+  final_path.clear();
+}
+
 IndexXY AstarSearchNode::cal_pose_index(const Pose &p, const Pose &ori)
 {
   IndexXY idx{};
@@ -58,6 +69,8 @@ bool AstarSearchNode::is_valid(const AstarNode &node)
 
 bool AstarSearchNode::find_final_path(const AstarNode &end_node)
 {
+  final_path_idx.clear();
+  final_path.clear();
   final_path_idx.emplace_back(IndexXY(end_node.x, end_node.y));
   final_path.emplace_back(cal_node_pose(end_node));
   auto parent = end_node.parent;
@@ -91,6 +104,7 @@ bool AstarSearchNode::process_synced_data(const OccupancyGrid &grid,
   const PoseStamped &start, const PoseStamped &end)
 {
   RCLCPP_INFO(get_logger(), "Process synced data");
+  init_data();
   height = grid.info.height;
   width = grid.info.width;
   resolution = grid.info.resolution;
