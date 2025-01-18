@@ -50,6 +50,11 @@ class AstarSearchNode : public rclcpp::Node
 public:
   AstarSearchNode()
   : Node("astar_search_node") {
+    grid_map = std::make_unique<std::vector<int8_t>>();
+    cost_map = std::make_unique<std::vector<std::vector<int8_t>>>();
+    motion = std::make_unique<std::vector<MotionCost>>();
+    open_map = std::make_unique<std::unordered_map<int, AstarNode>>();
+    close_map = std::make_unique<std::unordered_map<int, AstarNode>>();
     this->grid_sub = this->create_subscription<OccupancyGrid>(
       "grid_map", 10, std::bind(&AstarSearchNode::grid_callback, this, _1));
     this->start_sub = this->create_subscription<PoseStamped>(
@@ -89,8 +94,8 @@ private:
   std::queue<OccupancyGrid> grid_buf{};
   std::queue<PoseStamped> start_buf{};
   std::queue<PoseStamped> end_buf{};
-  uint32_t height{};
-  uint32_t width{};
+  int height{};
+  int width{};
   double resolution{};
   Pose origin_pose{};
   Pose start_pose{};

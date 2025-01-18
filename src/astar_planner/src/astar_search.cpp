@@ -19,7 +19,7 @@ double AstarSearchNode::calc_heuristic(const AstarNode &n1, const AstarNode &n2)
 {
   double weight = 1.0;
   double d = weight * std::hypot(n1.x - n2.x, n1.y - n2.y);
-  return 0.0;
+  return d;
 }
 
 bool AstarSearchNode::is_valid(const AstarNode &node)
@@ -32,11 +32,11 @@ bool AstarSearchNode::is_valid(const AstarNode &node)
 
 bool AstarSearchNode::find_final_path(const AstarNode &end_node)
 {
-  final_path.push_back(IndexXY(end_node.x, end_node.y));
+  final_path.emplace_back(IndexXY(end_node.x, end_node.y));
   auto parent = end_node.parent;
   while (parent != -1) {
     auto node = close_map->at(parent);
-    final_path.push_back(IndexXY(node.x, node.y));
+    final_path.emplace_back(IndexXY(node.x, node.y));
     parent = node.parent;
   }
   return true;
@@ -52,7 +52,8 @@ bool AstarSearchNode::process_bufs()
     start_buf.pop();
     auto end_msg = end_buf.front();
     end_buf.pop();
-    if (res = process_synced_data(grid_msg, start_msg, end_msg) != true) break;
+    res = process_synced_data(grid_msg, start_msg, end_msg);
+    if (!res) break;
   }
   return res;
 }
@@ -60,6 +61,7 @@ bool AstarSearchNode::process_bufs()
 bool AstarSearchNode::process_synced_data(const OccupancyGrid &grid,
   const PoseStamped &start, const PoseStamped &end)
 {
+  RCLCPP_INFO(get_logger(), "Process synced data");
   height = grid.info.height;
   width = grid.info.width;
   resolution = grid.info.resolution;
@@ -68,16 +70,16 @@ bool AstarSearchNode::process_synced_data(const OccupancyGrid &grid,
   for (auto i = 0; i < height; i++) {
     std::vector<int8_t> row;
     for (auto j = 0; j < width; j++) {
-      row.push_back(grid_map->at(i * width + j));
+      row.emplace_back(grid_map->at(i * width + j));
     }
-    cost_map->push_back(row);
+    cost_map->emplace_back(row);
   }
   for (auto i = -1; i <= 1; i++) {
     for (auto j = -1; j <= 1; j++) {
       if (i == 0 && j == 0) continue;
       double cost  = std::sqrt(i * i + j * j);
       auto motion_cost = MotionCost(i, j, cost);
-      motion->push_back(motion_cost);
+      motion->emplace_back(motion_cost);
     }
   }
   start_pose = start.pose;
@@ -91,7 +93,8 @@ bool AstarSearchNode::astar_search(const IndexXY& start, const IndexXY& end)
 {
   auto start_node = AstarNode(start.x, start.y, 0.0, -1);
   auto end_node = AstarNode(end.x, end.y, 0.0, -1);
-  open_map->at(cal_grid_index(start_node)) = start_node;
+  auto start_idx = cal_grid_index(start_node);
+  open_map->try_emplace(start_idx, start_node);
   while (true) {
     if (open_map->empty()) {
       RCLCPP_ERROR(get_logger(), "Open map is empty..");
@@ -114,7 +117,7 @@ bool AstarSearchNode::astar_search(const IndexXY& start, const IndexXY& end)
       break;
     }
     open_map->erase(curr_id);
-    close_map->at(curr_id) = curr_node;
+    close_map->try_emplace(curr_id, curr_node);
     for (const auto& m : *motion) {
       auto node = AstarNode(curr_node.x + m.i, curr_node.y + m.j, 
         curr_node.cost + m.cost, curr_id);
@@ -124,7 +127,8 @@ bool AstarSearchNode::astar_search(const IndexXY& start, const IndexXY& end)
       else if (close_map->find(node_id) != close_map->end()) continue;
 
       if (open_map->find(node_id) == open_map->end() || 
-          open_map->at(node_id).cost > node.cost) open_map->at(node_id) = node;
+          open_map->at(node_id).cost > node.cost) 
+          open_map->try_emplace(node_id, node);
     }
   }
   return find_final_path(end_node);
