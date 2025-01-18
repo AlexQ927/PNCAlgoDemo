@@ -2,6 +2,24 @@
 
 using namespace pnc;
 
+void AstarSearchNode::timer_callback()
+{
+  if (is_arrived) {
+    message.start_pose = start_pose;
+    message.end_pose = end_pose;
+    message.occupancy_grid.header.frame_id = "grid_map";
+    message.occupancy_grid.header.stamp = this->now();
+    message.occupancy_grid.info.height = height;
+    message.occupancy_grid.info.width = width;
+    message.occupancy_grid.info.origin = origin_pose;
+    message.occupancy_grid.info.resolution = resolution;
+    message.occupancy_grid.data = grid_map;
+    message.final_path = final_path;
+    RCLCPP_INFO(this->get_logger(), "Publish Astar Path!");
+    this->astar_pub->publish(message);
+  }
+}
+
 IndexXY AstarSearchNode::cal_pose_index(const Pose &p, const Pose &ori)
 {
   IndexXY idx{};
@@ -13,6 +31,14 @@ IndexXY AstarSearchNode::cal_pose_index(const Pose &p, const Pose &ori)
 int AstarSearchNode::cal_grid_index(const AstarNode &node)
 {
   return node.y * width + node.x;
+}
+
+Pose AstarSearchNode::cal_node_pose(const AstarNode &node)
+{
+  Pose p{};
+  p.position.x = node.x * resolution + origin_pose.position.x;
+  p.position.y = node.y * resolution + origin_pose.position.y;
+  return p;
 }
 
 double AstarSearchNode::calc_heuristic(const AstarNode &n1, const AstarNode &n2)
@@ -32,13 +58,16 @@ bool AstarSearchNode::is_valid(const AstarNode &node)
 
 bool AstarSearchNode::find_final_path(const AstarNode &end_node)
 {
-  final_path.emplace_back(IndexXY(end_node.x, end_node.y));
+  final_path_idx.emplace_back(IndexXY(end_node.x, end_node.y));
+  final_path.emplace_back(cal_node_pose(end_node));
   auto parent = end_node.parent;
   while (parent != -1) {
     auto node = close_map->at(parent);
-    final_path.emplace_back(IndexXY(node.x, node.y));
+    final_path_idx.emplace_back(IndexXY(node.x, node.y));
+    final_path.emplace_back(cal_node_pose(node));
     parent = node.parent;
   }
+  is_arrived = true;
   return true;
 }
 
@@ -66,11 +95,11 @@ bool AstarSearchNode::process_synced_data(const OccupancyGrid &grid,
   width = grid.info.width;
   resolution = grid.info.resolution;
   origin_pose = grid.info.origin;
-  grid_map = std::make_unique<std::vector<int8_t>>(grid.data);
+  grid_map = grid.data;
   for (auto i = 0; i < height; i++) {
     std::vector<int8_t> row;
     for (auto j = 0; j < width; j++) {
-      row.emplace_back(grid_map->at(i * width + j));
+      row.emplace_back(grid_map.at(i * width + j));
     }
     cost_map->emplace_back(row);
   }
