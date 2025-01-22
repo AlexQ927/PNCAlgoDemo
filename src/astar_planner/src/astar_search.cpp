@@ -29,6 +29,7 @@ void AstarSearchNode::init_data()
   grid_map.clear();
   final_path_idx.clear();
   final_path.clear();
+  is_arrived = false;
 }
 
 IndexXY AstarSearchNode::cal_pose_index(const Pose &p, const Pose &ori)
