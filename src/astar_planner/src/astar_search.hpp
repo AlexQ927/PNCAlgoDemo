@@ -84,9 +84,9 @@ private:
   }
   void timer_callback();
   void init_data();
-  IndexXY cal_pose_index(const Pose& p, const Pose& ori);
-  int cal_grid_index(const AstarNode& node);
-  Pose cal_node_pose(const AstarNode& node);
+  IndexXY cal_pose_index(const Pose& p, const Pose& ori) const;
+  int cal_grid_index(const AstarNode& node) const;
+  Pose cal_node_pose(const AstarNode& node) const;
   double calc_heuristic(const AstarNode& n1, const AstarNode& n2);
   bool is_valid(const AstarNode& node);
   bool find_final_path(const AstarNode& end_node);

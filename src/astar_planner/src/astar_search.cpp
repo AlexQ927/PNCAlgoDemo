@@ -32,21 +32,18 @@ void AstarSearchNode::init_data()
   is_arrived = false;
 }
 
-IndexXY AstarSearchNode::cal_pose_index(const Pose &p, const Pose &ori)
-{
+IndexXY AstarSearchNode::cal_pose_index(const Pose &p, const Pose &ori) const {
   IndexXY idx{};
   idx.x = std::round((p.position.x - ori.position.x) / resolution);
   idx.y = std::round((p.position.y - ori.position.y) / resolution);
   return idx;
 }
 
-int AstarSearchNode::cal_grid_index(const AstarNode &node)
-{
+int AstarSearchNode::cal_grid_index(const AstarNode &node) const {
   return node.y * width + node.x;
 }
 
-Pose AstarSearchNode::cal_node_pose(const AstarNode &node)
-{
+Pose AstarSearchNode::cal_node_pose(const AstarNode &node) const {
   Pose p{};
   p.position.x = node.x * resolution + origin_pose.position.x;
   p.position.y = node.y * resolution + origin_pose.position.y;
@@ -63,8 +60,8 @@ double AstarSearchNode::calc_heuristic(const AstarNode &n1, const AstarNode &n2)
 bool AstarSearchNode::is_valid(const AstarNode &node)
 {
   if (node.x < 0 || node.x >= width) return false;
-  else if (node.y < 0 || node.y >= height) return false;
-  else if ((cost_map->at(node.y).at(node.x)) != 0) return false;
+  if (node.y < 0 || node.y >= height) return false;
+  if (cost_map->at(node.y).at(node.x) != 0) return false;
   return true;
 }
 
